@@ -1,26 +1,38 @@
-let port = browser.runtime.connectNative("a");
-console.log(port);
-port.onDisconnect.addListener((p) => {
+function set_state_to_connected(conn) {
 
-	if (p.error) {
-
-		console.log("Disconnected due to error: " + p.error.message);
-	}
-});
-if (port.error) {
-
-	console.log("Failed to initialize runtime port: " + port.error);
-} else {
-
-	console.log("Initialized runtime port");
+	clearInterval(tryConnectIntervalId);
+	console.log("Opened connection");
+	activeConnection = conn;
+	sendDataIntervalId = setInterval(send_data, 5000);
 }
-port.onMessage.addListener((resp) => {
+function attempt_connect() {
 
-	console.log("Received message");
-});
+	console.log("Attempted to connect");
+	const socket = new WebSocket("http://127.0.0.1:1234");
 
-function myFunction() {
+	socket.onopen = (event) => {
+		set_state_to_connected(socket);
+	};
+	socket.onerror = (event) => {
+		console.log(event);
+	};
 
-	port.postMessage("Lol");
+	socket.onmessage = (event) => {
+
+		console.log(event);l
+	};
+
+	socket.onclose = (event) => {
+
+		console.log(event);
+	};
 }
-window.setTimeout(myFunction, 3000);
+
+function send_data() {
+
+	activeConnection.send("Lol");
+
+}
+let tryConnectIntervalId = setInterval(attempt_connect, 5000);
+let activeConnection = null;
+let sendDataIntervalId = null;

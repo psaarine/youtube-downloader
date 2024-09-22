@@ -1,55 +1,74 @@
-mod common;
+extern crate websocket;
+use std::net::{TcpStream};
+use std::io::Write;
+use websocket::server::{InvalidConnection};
+use websocket::server::upgrade::WsUpgrade;
+use websocket::server::upgrade::sync::Buffer;
+use websocket::client::sync::Client;
+use websocket::ws::dataframe::DataFrame;
+use core::net::Ipv4Addr;
+use std::net::SocketAddr;
+use std::net::IpAddr;
 
-use std::ops::Deref;
+type ConnectionResponse = Result<WsUpgrade<TcpStream, Option<Buffer>>, InvalidConnection<TcpStream, Buffer>>;
 
-use crate::common::wait_job;
 fn main() {
     
-    let items: std::vec::Vec<String> = std::vec::Vec::new();
-    let mutex_and_condvar = std::sync::Arc::new((std::sync::Mutex::new(items), std::sync::Condvar::new()));
-    let consumer_mutex_and_condvar = mutex_and_condvar.clone();
+    let addr = IpAddr::V4(Ipv4Addr::LOCALHOST);
+    let port: u16 = 1234;
+    let socket_addr = SocketAddr::new(addr, port);
+    let server = websocket::sync::Server::bind(socket_addr);
 
-    std::thread::spawn(move || {
+    if let Err(ref e) = server {
 
-        let (items_mutex, condvar) = mutex_and_condvar.deref();
-        loop {
+        println!("Failed to create server:{}", e);
+    } else {
 
-            let msg = get_application_message();
-            {
+        println!("Listening on {}", socket_addr);
+    }
 
-                let mut target_container = items_mutex.lock().unwrap();
-                println!("Adding {} to the items", msg);
-                target_container.push(msg);
-                condvar.notify_all();
-            }
+    let mut server = server.unwrap();
+    let mut client = server.find_map(try_map_connection).unwrap();
 
+    println!("Connected to client, listening to messages");
+
+    loop {
+
+        let dataframe = client.recv_dataframe().unwrap();
+        let mut writer = std::io::BufWriter::new(std::io::stdout());
+        let resp = dataframe.write_to(&mut writer, false);
+
+        if !resp.is_ok() {
+
+            println!("Failed to read dataframe");
+        } else {
+
+            writer.flush();
         }
 
-    });
 
-    let consumer = std::thread::spawn(move || {
-
-        let (items_mutex, condvar) = consumer_mutex_and_condvar.deref();
-        loop {
-
-            let work_items = wait_job(items_mutex, condvar);
-            consume_messages(work_items);
-        }
-    });
-
-    let _ = consumer.join();
+    }
 }
 
-fn get_application_message() -> String {
+pub fn try_map_connection(resp: ConnectionResponse) -> Option<Client<TcpStream>>{
 
-    std::thread::sleep(std::time::Duration::from_millis(5000));
-    return "Message".to_owned();
-}
+    if let Err(ref _e) = resp {
 
-fn consume_messages<T> (messages: std::vec::Vec<T>) where T: std::fmt::Display {
+        println!("Tried to create connection but failed");
+        return None;
+    }
 
-    for msg in messages.into_iter() {
 
-        println!("Got {}", msg);
+    let resp = resp.unwrap();
+    let client = resp.accept();
+
+    if let Err(e) = client {
+
+        println!("Could not create client, {}", e.1);
+        return None;
+    } else {
+
+        let client_container = Some(client.unwrap());
+        return client_container;
     }
 }
