@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "name": "youtube-downloader",
+  "description": "Downloads youtube videos",
+  "version": "0.0.1",
+  "background": {
+    "scripts": [
+      "build/main.js"
+    ]
+  }, 
+  "permissions": ["bookmarks"]
+}

@@ -1,0 +1,1 @@
+(()=>{"use strict";let e=null;function t(e){console.log(e)}e=setInterval((function(){var e;e=t,browser.bookmarks.getTree().then((t=>{e(t)}))}),5e3)})();

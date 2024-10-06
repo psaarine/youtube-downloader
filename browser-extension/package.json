@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "run": "web-ext run",
+    "test": "jest",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "web-ext-plugin": "^2.10.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
