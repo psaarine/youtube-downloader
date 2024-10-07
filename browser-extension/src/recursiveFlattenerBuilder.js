@@ -1,13 +1,35 @@
 let maxRecursionDebth = 100;
 
-exports.createFlattener = (builderParams) => {
+function getBookmarkNodeContent(node) {
+
+	if (node.type == "bookmark") {
+
+		return [node.url];
+	} else {
+
+		return [];
+	}
+
+}
+
+function getNodeConnectedNodes(node) {
+
+	if (node.type == "folder") {
+
+		return node.children;
+	} else {
+
+		return [];
+	};
+}
+
+function createFlattener(builderParams) {
 
 	let workerFunc = (item) =>  {
 
 		let workingItems = [item];
 		let scrapedContent = [];
 		let index = 0;
-		console.log("lenght is " + workingItems.length);
 
 		while (workingItems.length > 0) {
 
@@ -16,12 +38,13 @@ exports.createFlattener = (builderParams) => {
 
 				throw new Error("Infinite loop detected");
 			}
+
 			let currentItem = workingItems.pop();
 
-			scrapedContent.push(builderParams.getNodeContent(currentItem));
+			scrapedContent = scrapedContent.concat(builderParams.getNodeContent(currentItem));
 			
 			let nodeLinkedNodes = builderParams.getNodeLinkedNodes(currentItem);
-			workingItems.concat(nodeLinkedNodes);
+			workingItems = workingItems.concat(nodeLinkedNodes);
 
 		}
 
@@ -29,5 +52,15 @@ exports.createFlattener = (builderParams) => {
 
 	};
 	return workerFunc;
-
 }
+
+function createDefaultFlattener() {
+
+	let builderParams = {};
+	builderParams.getNodeContent = getBookmarkNodeContent;
+	builderParams.getNodeLinkedNodes = getNodeConnectedNodes;
+
+	return createFlattener(builderParams);
+}
+exports.createDefaultFlattener = createDefaultFlattener;
+exports.createFlattener = createFlattener;
